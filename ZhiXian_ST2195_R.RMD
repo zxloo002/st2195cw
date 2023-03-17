@@ -203,34 +203,7 @@ ggplot(ydata, aes(x = ManYear, y = AvgDelay)) +
 ### Question 3
 
 ```{r}
-flight$route <- paste(flight$Origin, flight$Dest, sep = "-")
-
-travel <- flight %>%
-  group_by(route, Year) %>%
-  summarise(TotalFlights = n())
-
-before <- filter(travel, Year == "2006")
-before %<>% rename(Before = TotalFlights)
-
-after <- filter(travel, Year == "2007")
-after %<>% rename(After = TotalFlights)
-
-difference <- left_join(before, after, by = "route") %>%
-  select(route, Before, After)
-
-difference <- replace(difference,is.na(difference), 0)
-
-h6 <- difference %>%
-  summarize(Difference = After - Before) %>%
-  arrange(desc(Difference))
-
-head(h6) #increased the most
-tail(h6) #decreased the most
-
-```
-
-```{r}
-#another method, by incoming and outgoing difference for each year, for each state
+#by incoming and outgoing difference for each year, for each state
 info <- left_join(flight, airports, by = c("Origin" = "iata")) %>%
   left_join(airports, by= c("Dest" = "iata"))
 
@@ -285,6 +258,7 @@ ggplot(tail(outbound), aes(x= State, y= Diff))  +
   theme_light()
 ```
 ##Question 4
+
 ```{r}
 #show that departure delay affects arrival delay at the next airport
 delayed %>%
