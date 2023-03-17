@@ -2,8 +2,6 @@
 title: "ST2195_Coursework"
 author: "Loo Zhi Xian"
 date: "2023-03-12"
-output:
-  html_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -41,6 +39,8 @@ flight <- rbind(data_2006, data_2007) %>%
   distinct()
 
 flight[flight == ""] <- NA
+
+flight %<>%
 ```
 
 ### Question 1 data wrangling
@@ -53,7 +53,9 @@ delayed <- flight %>%
                            labels =  c("0000 ~ 0159 hrs", "0200 ~ 0359 hrs", "0400 ~ 0559 hrs", "0600 ~ 0759 hrs", 
                                        "0800 ~ 0959 hrs", "1000 ~ 1159 hrs", "1200 ~ 1359 hrs", "1400 ~ 1559 hrs",
                                        "1600 ~ 1759 hrs","1800 ~ 1959 hrs", "2000 ~ 2159 hrs", "2200 ~ 2359 hrs"),
-                           right = FALSE))
+                           right = FALSE)) %>%
+  mutate(ADelay = as_factor(ifelse(ArrDelay > 0, 1,0))) %>%
+  mutate(DDelay = as_factor(ifelse(DepDelay > 0, 1,0)))
 
 arrival_delay <- delayed %>% 
   filter(ArrDelay > 0) %>%
@@ -62,8 +64,24 @@ arrival_delay <- delayed %>%
 arrival_delay
 ```
 
+```{r}
+#probability of a flight being delayed
+delayed %>%
+  group_by(DayOfWeek) %>% 
+  summarize(prob_delay = round(mean(ADelay == 1) * 100, 2)) 
+```
 
 ```{r}
+delayed %>%
+  group_by(DepInterval) %>% 
+  summarize(Percent = round(mean(ADelay == 1) * 100, 2)) %>%
+  ggplot(aes(x= Percent, y= DepInterval)) +
+  geom_col() +
+  labs(title = "Probability of delayed flight", x = "Percentage", y = "") +
+  scale_y_discrete(limits = rev) +
+  geom_text(aes(label = Percent), hjust = - 0.1 ,position = position_dodge(width = 1), size = 3) +
+  theme_classic()
+
 #mean depart delay time for each intervals
 TimeOfDay <- arrival_delay %>%
   group_by(DepInterval) %>%
@@ -85,7 +103,20 @@ least_delay_day + geom_text(aes(label = AvgDelay), hjust = - 0.1 ,position = pos
 ```
 
 ```{r}
-day_of_week <- arrival_delay%>%
+delayed %>%
+  mutate(DayOfWeek = factor(x=DayOfWeek, 
+                            levels = c(1,2,3,4,5,6,7), 
+                            labels = c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"))) %>%
+  group_by(DayOfWeek) %>% 
+  summarize(Percent = round(mean(ADelay == 1) * 100, 2)) %>%
+  ggplot(aes(x= Percent, y= DayOfWeek)) +
+  geom_col() +
+  labs(title = "Probability of delayed flight", x = "Percentage", y = "") +
+  scale_y_discrete(limits = rev) +
+  geom_text(aes(label = Percent), hjust = - 0.1 ,position = position_dodge(width = 1), size = 3) +
+  theme_classic()
+
+day_of_week <- arrival_delay %>%
   mutate(DayOfWeek = factor(x=DayOfWeek, 
                             levels = c(1,2,3,4,5,6,7), 
                             labels = c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"))) %>%
@@ -125,6 +156,18 @@ quarter_delay + geom_text(aes(label = AvgDelay), vjust = -0.1, position = positi
 ```
 
 ```{r}
+#probability of a flight having an arrival delay
+delayed %>%
+  mutate(Month = factor(Month)) %>%
+  group_by(Month) %>% 
+  summarize(Percent = round(mean(ADelay == 1) * 100, 2)) %>%
+  ggplot(aes(x= Percent, y= Month)) +
+  geom_col() +
+  labs(title = "Probability of delayed flight", x = "Percentage", y = "") +
+  scale_y_discrete(limits = rev) +
+  geom_text(aes(label = Percent), hjust = - 0.1 ,position = position_dodge(width = 1), size = 3) +
+  theme_classic()
+
 #bar plot for month
 monthly_delay <- arrival_delay %>%
   mutate(Month = factor(Month)) %>%
@@ -141,19 +184,29 @@ monthly_delay + geom_text(aes(label = AvgDelay), hjust = - 0.1, size = 3)
 ##Question 2
 
 ```{r}
-#join planes to data (duration of delay)
+#join planes to flight and change the type from chr to int and drop all rows with NA in 'year' column
 pdata <-left_join(delayed, planes, by = c("TailNum" = "tailnum")) %>%
   rename("ManYear" = "year") %>%
-  filter(!(DepDelay <= 0 & ArrDelay <= 0)) #filter out rows with no delays
-
-#change the type from chr to int and drop all rows with NA in 'year' column
-pdata %<>% mutate(ManYear = as.integer(ManYear)) %>%
-  drop_na(ManYear)
-
-pdata
+  mutate(ManYear = as.integer(ManYear)) %>%
+  drop_na(ManYear) %>%
+  filter(ManYear != 0)
+  
+#probability of a flight with delay
+pdata %>%
+  mutate(ManYear = as_factor(ManYear)) %>%
+  filter(ManYear != 0) %>%
+  group_by(ManYear) %>%
+  summarise(Percent = round(mean(ADelay == 1 | DDelay == 1)* 100,2)) %>%
+  ggplot(aes(x = Percent, y = ManYear)) +
+  geom_col() +
+  labs(title = "Probability of flight delay", x = "Percentage", y = "") +
+  scale_y_discrete(limits = rev) +
+  geom_text(aes(label = Percent), hjust = - 0.1 ,position = position_dodge(width = 1), size = 3) +
+  theme_classic()
 
 #show only ArrDelay and year column, filter out flights with no year
 ydata <- pdata %>% 
+  filter(!(DepDelay <= 0 & ArrDelay <= 0)) %>% #filter out flights with no delays
   filter(ArrDelay > 0, ManYear != 0) %>%
   select(ArrDelay, ManYear) %>%
   group_by(ManYear) %>%
