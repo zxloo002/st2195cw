@@ -32,12 +32,13 @@ carriers <- read.csv("carriers.csv", header = TRUE)
 data_2006 <- read.csv("2006.csv")
 data_2007 <- read.csv("2007.csv")
 ```
-Row binding the data from 2006 and 2007 and removing duplicates. We also change all empty data into NA values.
 
+Join the data from 2006 and 2007 together and remove duplicates.
 ```{r}
 flight <- rbind(data_2006, data_2007) %>%
   distinct()
 
+#Change all empty data into NA values.
 flight[flight == ""] <- NA
 ```
 
@@ -57,19 +58,14 @@ delayed <- flight %>%
 
 arrival_delay <- delayed %>% 
   filter(ArrDelay > 0) %>%
-  select(Year, Month, DayofMonth, DayOfWeek, DepTime, CRSDepTime, ArrTime, CRSArrTime, TailNum, DepDelay, ArrDelay, DepInterval)
+  select(Year, Month, DayofMonth, DayOfWeek, CRSDepTime, CRSArrTime, TailNum, DepDelay, ArrDelay, DepInterval)
 
 arrival_delay
 ```
+##Best time of the day
 
 ```{r}
-#probability of a flight being delayed
-delayed %>%
-  group_by(DayOfWeek) %>% 
-  summarize(Percent = round(mean(ADelay == 1) * 100, 2)) 
-```
-
-```{r}
+#Probabiliy a flight being delayed for each depature interval
 delayed %>%
   group_by(DepInterval) %>% 
   summarize(Percent = round(mean(ADelay == 1) * 100, 2)) %>%
@@ -158,46 +154,23 @@ monthly_delay + geom_text(aes(label = AvgDelay), hjust = - 0.1, size = 3)
 
 ##Question 2
 
-```{r}
+```{r, echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='hide',fig.keep='all'}
 #join planes to flight and change the type from chr to int and drop all rows with NA in 'year' column
 pdata <-left_join(delayed, planes, by = c("TailNum" = "tailnum")) %>%
   rename("ManYear" = "year") %>%
   mutate(ManYear = as.integer(ManYear)) %>%
-  drop_na(ManYear) %>%
-  filter(ManYear != 0)
+  filter(ManYear != 0 & !is.na(ManYear)) %>%
+  mutate(age = Year - ManYear) %>%
+  filter(age > 0)
   
 #probability of a flight with delay
 pdata %>%
-  #mutate(ManYear = as_factor(ManYear)) %>%
-  filter(ManYear != 0) %>%
-  group_by(ManYear) %>%
+  group_by(age) %>%
   summarise(Percent = round(mean(ADelay == 1 | DDelay == 1)* 100,2)) %>%
-  ggplot(aes(x = ManYear, y = Percent)) +
+  ggplot(aes(x = age, y = Percent)) +
   geom_point() +
-  labs(title = "Probability of flight delay", x = "Manufacture Year", y = "") +
-  geom_smooth(se = FALSE)
-  #scale_y_discrete(limits = rev) +
-  geom_text(aes(label = Percent), hjust = - 0.1 ,position = position_dodge(width = 1), size = 3) +
+  labs(title = "Probability of flight delay", x = "Age of plane", y = "") +
   theme_classic()
-
-#show only ArrDelay and year column, filter out flights with no year
-ydata <- pdata %>% 
-  filter(!(DepDelay <= 0 & ArrDelay <= 0)) %>% #filter out flights with no delays
-  filter(ArrDelay > 0, ManYear != 0) %>%
-  select(ArrDelay, ManYear) %>%
-  group_by(ManYear) %>%
-  summarise(AvgDelay = mean(ArrDelay))
-
-ydata
-
-```
-
-```{r}
-ggplot(ydata, aes(x = ManYear, y = AvgDelay)) +
-  geom_point() +
-  geom_smooth()+
-  labs(title = "Average Delay for Planes", x = "Manufacture Year for Plane", y = "Average Delay (Minutes)") +
-  theme_ipsum()
 ```
 
 ### Question 3
@@ -237,24 +210,38 @@ tail(inbound) #states with the highest decrease in inbound flight
 ```
 
 ```{r}
+states <- c("AL" = "Alabama", "AK" = "Alaska",  "AZ" = "Arizona",  "AR" = "Arkansas",  "CA" = "California",  "CO" = "Colorado",
+  "CT" = "Connecticut",  "DE" = "Delaware",  "FL" = "Florida", "GA" = "Georgia",  "HI" = "Hawaii",  "ID" = "Idaho",  "IL" = "Illinois",
+  "IN" = "Indiana",  "IA" = "Iowa",  "KS" = "Kansas",  "KY" = "Kentucky",  "LA" = "Louisiana",  "ME" = "Maine",  "MD" = "Maryland",
+  "MA" = "Massachusetts",  "MI" = "Michigan",  "MN" = "Minnesota",  "MS" = "Mississippi",  "MO" = "Missouri",  "MT" = "Montana",
+  "NE" = "Nebraska",  "NV" = "Nevada",  "NH" = "New Hampshire",  "NJ" = "New Jersey",  "NM" = "New Mexico",  "NY" = "New York",  "NC" = "North Carolina",
+  "ND" = "North Dakota",  "OH" = "Ohio",  "OK" = "Oklahoma",  "OR" = "Oregon",  "PA" = "Pennsylvania",
+  "RI" = "Rhode Island",  "SC" = "South Carolina", "SD" = "South Dakota",  "TN" = "Tennessee", "TX" = "Texas",  
+  "UT" = "Utah", "VT" = "Vermont",  "VA" = "Virginia", "WA" = "Washington", "WV" = "West Virginia",
+  "WI" = "Wisconsin", "WY" = "Wyoming", "PR" = "Puerto Rico", "VI" = "Virgin Islands")
+
 ggplot(head(inbound), aes(x= State, y= Diff))  +
   geom_col() +
   labs(title = "Highest increase in inbound flights", x = "States", y = "") +
+  scale_x_discrete(labels = states) +
   theme_light()
 
 ggplot(tail(inbound), aes(x= State, y= Diff))  +
   geom_col() +
   labs(title = "Highest decrease in inbound flights", x = "States", y = "") +
+  scale_x_discrete(labels = states) +
   theme_light()  
 
 ggplot(head(outbound), aes(x= State, y= Diff))  +
   geom_col() +
   labs(title = "Highest increase in outbound flights", x = "States", y = "") +
+  scale_x_discrete(labels = states) +
   theme_light()
 
 ggplot(tail(outbound), aes(x= State, y= Diff))  +
   geom_col() +
   labs(title = "Highest decrease in outbound flights", x = "States", y = "") +
+  scale_x_discrete(labels = states) +
   theme_light()
 ```
 ##Question 4
@@ -311,55 +298,62 @@ library(mlr3)
 library(mlr3learners)
 library(mlr3pipelines)
 library(mlr3tuning)
+library(skimr)
 ```
 
-Create the column `Delayed`:
+Create the column `Delayed`
 
 ```{r}
+delayed$Origin <- as_factor(delayed$Origin)
 delayed %<>%
   mutate(Delayed = as_factor(ifelse(ArrDelay > 0 | DepDelay > 0, 1, 0)))
 
-delayed$UniqueCarrier <- as.factor(flight$UniqueCarrier)
-delayed %<>% na.omit(delayed$Delayed)
+delayed %<>% filter(!is.na(Delayed))
+
+skim(delayed)
+
+delay_model <- delayed %>%
+  select(Year, Month, DayofMonth, DayOfWeek, CRSDepTime, CRSArrTime, ArrDelay, DepDelay, ADelay, DDelay, Delayed, Origin, DepInterval)
 
 ```
 
-Get the training and test sets
+Create the training and test sets
 
 ```{r}
-n <- nrow(delayed)
-train_set <- sample(n, round(0.5*n))
+#get the training and test set
+set.seed(1)
+
+df <- sample_n(delay_model,100000)
+n <- nrow(df)
+
+train_set <- sample(n, round(0.7*n))
 test_set <- setdiff(1:n, train_set)
 ```
 
 ### Set up the task 
 
 ```{r}
-task <- TaskClassif$new('delayed', backend=delayed, target = 'Delayed')
-task$select(c('Year', 'Month', 'DayofMonth', 'DayOfWeek', 'CRSDepTime', 'UniqueCarrier'))
+task <- TaskClassif$new('df', backend=df, target = 'Delayed')
+task$select(c('Year', 'Month', 'DayofMonth', 'DayOfWeek', 'DepInterval'))
 measure <- msr('classif.ce')
 task
 ```
-
-Some of the variables are factor for which some methods do not support factor, so we need to convert them to numerical values.
-(The following will be used later.)
+Convert factor variables into numerical values.
 
 ```{r}
 fencoder <- po("encode", method = "treatment",
-  affect_columns = selector_type("factor"))
+               affect_columns = selector_type("factor"))
 ord_to_int <- po("colapply", applicator = as.integer,
-  affect_columns = selector_type("ordered"))
+                 affect_columns = selector_type("ordered"))
 ```
 
-Some methods require tuning the hyperparameters. 
-(The following will be used later.)
+Some methods require tuning the hyperparameters.
 
 ```{r}
 tuner <- tnr('grid_search')
 terminator <- trm('evals', n_evals = 20)
 ```
-
-## 2. Extend the results with different classification models
+## Different classification models
 
 ### Logistic regression
 
@@ -376,7 +370,7 @@ glrn_lr$predict(task, row_ids = test_set)$score()
 ### Gradient boosting
 
 ```{r}
-install.packages("xgboost")
+library(xgboost)
 learner_gb <- lrn("classif.xgboost")
 gc_gb <- po('imputemean') %>>%
   fencoder %>>% ord_to_int %>>%
@@ -461,7 +455,7 @@ at_rf$predict(task, row_ids = test_set)$score()
 ### Support vector machines
 
 ```{r}
-install.packages("e1071")
+library(e1071)
 learner_svm <- lrn("classif.svm")
 
 gc_svm <- po('imputemean') %>>% 
