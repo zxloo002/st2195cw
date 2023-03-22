@@ -5,6 +5,8 @@ from pathlib import Path
 from matplotlib import pyplot as plt
 from skimpy import skim
 
+pd.set_option('display.max_columns', None) #change to display all columns
+
 airports = pd.read_csv("airports.csv")
 planes = pd.read_csv("plane-data.csv")
 carriers = pd.read_csv("carriers.csv")
@@ -12,10 +14,12 @@ data_2006 = pd.read_csv("2006.csv")
 data_2007 = pd.read_csv("2007.csv")
 
 #Join the data for both years and remove duplicates
-flight = pd.concat([data_2006, data_2007], ignore_index=True).drop_duplicates()
+flight = pd.concat([data_2006, data_2007]).reset_index(drop = True).drop_duplicates()
 
-#replace empty values with NaN
-flight.replace("", np.nan, inplace=True)
+flight.loc[1] = ''
+
+#replace empty values with None
+flight.replace('', None)
 
 # Filter out cancelled and diverted flights
 delayed = flight[(flight["Cancelled"] == 0) & (flight["Diverted"] == 0)]
