@@ -16,20 +16,19 @@ data_2007 = pd.read_csv("2007.csv")
 #Join the data for both years and remove duplicates
 flight = pd.concat([data_2006, data_2007]).reset_index(drop = True).drop_duplicates()
 
-flight.loc[1] = ''
-
 #replace empty values with None
 flight.replace('', None)
 
+flight.info()
+
 # Filter out cancelled and diverted flights
-delayed = flight[(flight["Cancelled"] == 0) & (flight["Diverted"] == 0)]
+delayed = flight[(flight["Cancelled"] == 0) & (flight["Diverted"] == 0)].copy()
+
+delayed.info()
 
 #Question 1
 # Create a new column 'DepInterval' based on CRSDepTime
-DepInterval = pd.cut(delayed['CRSDepTime'], 
-                     bins=[0, 200, 400, 600, 800, 1000, 1200, 1400, 1600, 1800, 2000, 2200, 2400],)
-
-delayed["DepInterval"] = pd.cut(delayed["CRSDepTime"], 
+delayed.loc[:, "DepInterval"]  = pd.cut(delayed["CRSDepTime"], 
                                 bins=[0, 200, 400, 600, 800, 1000, 1200, 1400, 1600, 1800, 2000, 2200, 2400], 
                                 labels=["0000 ~ 0159 hrs", "0200 ~ 0359 hrs", "0400 ~ 0559 hrs", "0600 ~ 0759 hrs", 
                                         "0800 ~ 0959 hrs", "1000 ~ 1159 hrs", "1200 ~ 1359 hrs", "1400 ~ 1559 hrs", 
@@ -37,21 +36,23 @@ delayed["DepInterval"] = pd.cut(delayed["CRSDepTime"],
                                 include_lowest=True)
 
 # Create new columns ADelay and DDelay based on ArrDelay and DepDelay
-delayed["ADelay"] = pd.Series(np.where(delayed["ArrDelay"] > 0, 1, 0)).astype("category")
-delayed["DDelay"] = pd.Series(np.where(delayed["DepDelay"] > 0, 1, 0)).astype("category")
+delayed.loc[:,"ADelay"] = pd.Series(np.where(delayed["ArrDelay"] > 0, 1, 0)).astype("category")
+delayed.loc[:,"DDelay"] = pd.Series(np.where(delayed["DepDelay"] > 0, 1, 0)).astype("category")
 
 # Filter out flights with positive arrival delay and select relevant columns
 arrival_delay = delayed[delayed["ArrDelay"] > 0][["Year", "Month", "DayofMonth", "DayOfWeek", 
-                                                  "CRSDepTime", "CRSArrTime", "TailNum", 
-                                                  "DepDelay", "ArrDelay", "DepInterval"]]
+                                                  "CRSDepTime", "DepTime", "DepDelay", "ArrDelay", "DepInterval"]].copy()
 
-delayed_grouped = delayed.groupby("DepInterval").agg(Percent=("ADelay", lambda x: round(mean(x) * 100, 2)))
+arrival_delay.info()
 
-plt = delayed_grouped.plot(kind="barh", x="DepInterval", y="Percent", legend=False)
-plt.set_title("Probability of delayed flight")
-plt.set_xlabel("Percentage")
-plt.set_ylabel("")
-plt.invert_yaxis()
-for i in plt.containers:
-    plt.bar_label(i, label=f"{i.get_width()}%", label_type="edge", padding=5)
-plt.grid(axis="x")
+prob_delay = delayed.groupby('DepInterval')['ADelay'].mean()
+print(prob_delay)
+
+dailypercent = delayed.groupby('DepInterval').agg(Percent = ('ADelay', lambda x: round((x == 1).mean()* 100, 2))).reset_index()
+
+dailypercent.plot.barh(x= 'DepInterval', y= 'Percent')
+
+sns.barplot(y= 'DepInterval', x= 'Percent', data=dailypercent, orient= 'h')
+ax.bar_label(ax.containters[0])
+
+fig, ax = plt.subplots(figsize=(6, 8))
