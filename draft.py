@@ -24,8 +24,6 @@ flight.info()
 # Filter out cancelled and diverted flights
 delayed = flight[(flight["Cancelled"] == 0) & (flight["Diverted"] == 0)].copy()
 
-delayed.info()
-
 #Question 1
 # Create a new column 'DepInterval' based on CRSDepTime
 delayed.loc[:, "DepInterval"]  = pd.cut(delayed["CRSDepTime"], 
@@ -36,8 +34,10 @@ delayed.loc[:, "DepInterval"]  = pd.cut(delayed["CRSDepTime"],
                                 include_lowest=True)
 
 # Create new columns ADelay and DDelay based on ArrDelay and DepDelay
-delayed.loc[:,"ADelay"] = pd.Series(np.where(delayed["ArrDelay"] > 0, 1, 0)).astype("category")
-delayed.loc[:,"DDelay"] = pd.Series(np.where(delayed["DepDelay"] > 0, 1, 0)).astype("category")
+delayed['ADelay'] = delayed.ArrDelay > 0
+delayed['DDelay'] = delayed.DepDelay > 0
+
+delayed.info()
 
 # Filter out flights with positive arrival delay and select relevant columns
 arrival_delay = delayed[delayed["ArrDelay"] > 0][["Year", "Month", "DayofMonth", "DayOfWeek", 
@@ -45,14 +45,29 @@ arrival_delay = delayed[delayed["ArrDelay"] > 0][["Year", "Month", "DayofMonth",
 
 arrival_delay.info()
 
-prob_delay = delayed.groupby('DepInterval')['ADelay'].mean()
-print(prob_delay)
+dailypercent = delayed.groupby('DepInterval').ADelay.mean().reset_index()
 
-dailypercent = delayed.groupby('DepInterval').agg(Percent = ('ADelay', lambda x: round((x == 1).mean()* 100, 2))).reset_index()
+sns.barplot(y= 'DepInterval', x= 'ADelay', data=dailypercent, orient = 'h') #add in axis labels
 
-dailypercent.plot.barh(x= 'DepInterval', y= 'Percent')
+#ax.bar_label(ax.containters[0])
+#fig, ax = plt.subplots(figsize=(6, 8))
 
-sns.barplot(y= 'DepInterval', x= 'Percent', data=dailypercent, orient= 'h')
-ax.bar_label(ax.containters[0])
+avg_delay = arrival_delay.groupby('DepInterval').ArrDelay.mean().reset_index()
+sns.barplot(x= 'ArrDelay', y= 'DepInterval', data=avg_delay) #add in axis label
 
-fig, ax = plt.subplots(figsize=(6, 8))
+#DayOfWeek
+weekpercent = delayed.groupby('DayOfWeek').ADelay.mean().reset_index()
+sns.barplot(y= 'DayOfWeek', x= 'ADelay', data= weekpercent, orient = 'h')
+
+avg_delay_week = arrival_delay.groupby('DayOfWeek').ArrDelay.mean().reset_index()
+sns.barplot(x= 'ArrDelay', y= 'DayOfWeek', data=avg_delay_week) #add in axis label
+
+#Best time of year (months)
+monthpercent = delayed.groupby('Month').ADelay.mean().reset_index()
+sns.barplot(y= 'Month', x= 'ADelay', data= weekpercent, orient = 'h')
+
+avg_delay_month = arrival_delay.groupby('Month').ArrDelay.mean().reset_index()
+sns.barplot(x= 'ArrDelay', y= 'Month', data=avg_delay_month) #add in axis label
+
+#question 2
+plane_data = flight.merge(planes, left_on=('TailNum'), right_on=('tailnum'), how= 'left', indicator=True).copy()
