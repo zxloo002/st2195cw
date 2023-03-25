@@ -52,7 +52,7 @@ arrival_delay = delayed[delayed["ArrDelay"] > 0][["Year", "Month", "DayofMonth",
 arrival_delay.info()
 
 
-
+dict = {"1" : 'Monday', "2" : 'Tuesday', "Hadoop": 'H', "Python" : 'P', "Pandas": 'P'}
 
 
 
