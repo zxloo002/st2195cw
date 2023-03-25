@@ -58,7 +58,7 @@ delayed <- flight %>%
 
 arrival_delay <- delayed %>% 
   filter(ArrDelay > 0) %>%
-  select(Year, Month, DayofMonth, DayOfWeek, CRSDepTime, CRSArrTime, TailNum, DepDelay, ArrDelay, DepInterval)
+  select(Year, Month, DayofMonth, DayOfWeek, CRSDepTime, DepTime, DepDelay, ArrDelay, DepInterval)
 
 arrival_delay
 ```
@@ -226,7 +226,7 @@ ggplot(head(inbound), aes(x= State, y= Diff))  +
   scale_x_discrete(labels = states) +
   theme_light()
 
-ggplot(tail(inbound), aes(x= State, y= Diff))  +
+ggplot(tail(inbound), aes(x= State, y= abs(Diff)))  +
   geom_col() +
   labs(title = "Highest decrease in inbound flights", x = "States", y = "") +
   scale_x_discrete(labels = states) +
@@ -238,7 +238,7 @@ ggplot(head(outbound), aes(x= State, y= Diff))  +
   scale_x_discrete(labels = states) +
   theme_light()
 
-ggplot(tail(outbound), aes(x= State, y= Diff))  +
+ggplot(tail(outbound), aes(x= State, y= abs(Diff)))  +
   geom_col() +
   labs(title = "Highest decrease in outbound flights", x = "States", y = "") +
   scale_x_discrete(labels = states) +
@@ -288,7 +288,8 @@ ggplot(fdata)+
   geom_line(aes(y=CRSArrTime,x= Origin,colour="CRSArrTime"),group=1 )+
   geom_point(aes(y=CRSArrTime,x= Origin,colour="CRSArrTime")) +
   geom_line(aes(y=ArrTime,x= Origin,colour="ArrTime"),group=1) +
-  geom_point(aes(y=ArrTime,x= Origin,colour="ArrTime"))
+  geom_point(aes(y=ArrTime,x= Origin,colour="ArrTime")) +
+  labels(y = 'Time')
 
 ```
 ### Question 5
