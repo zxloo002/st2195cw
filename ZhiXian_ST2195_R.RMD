@@ -46,7 +46,7 @@ flight[flight == ""] <- NA
 
 ```{r}
 #Remove cancelled and delayed flights, then group the flights by their CRS Departure Time
-delayed <- flight %>% 
+flight %<>%
   filter(Cancelled == 0 & Diverted == 0) %>% 
   mutate(DepInterval = cut(CRSDepTime,breaks = c(0, 200, 400, 600, 800, 1000, 1200, 1400, 1600, 1800, 2000, 2200, 2400),
                            labels =  c("0000 ~ 0159 hrs", "0200 ~ 0359 hrs", "0400 ~ 0559 hrs", "0600 ~ 0759 hrs", 
@@ -56,7 +56,7 @@ delayed <- flight %>%
   mutate(ADelay = as_factor(ifelse(ArrDelay > 0, 1,0))) %>%
   mutate(DDelay = as_factor(ifelse(DepDelay > 0, 1,0)))
 
-arrival_delay <- delayed %>% 
+arrival_delay <- flight %>% 
   filter(ArrDelay > 0) %>%
   select(Year, Month, DayofMonth, DayOfWeek, CRSDepTime, DepTime, DepDelay, ArrDelay, DepInterval)
 
@@ -66,7 +66,7 @@ arrival_delay
 
 ```{r}
 #Probabiliy a flight being delayed for each depature interval
-delayed %>%
+flight %>%
   group_by(DepInterval) %>% 
   summarize(Percent = round(mean(ADelay == 1) * 100, 2)) %>%
   ggplot(aes(x= Percent, y= DepInterval)) +
@@ -97,7 +97,7 @@ least_delay_day + geom_text(aes(label = AvgDelay), hjust = - 0.1 ,position = pos
 ```
 
 ```{r}
-delayed %>%
+flight %>%
   mutate(DayOfWeek = factor(x=DayOfWeek, 
                             levels = c(1,2,3,4,5,6,7), 
                             labels = c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"))) %>%
@@ -128,7 +128,7 @@ day_of_week + geom_text(aes(label = AvgDelay), hjust = - 0.1 ,position = positio
 
 ```{r}
 #probability of a flight having an arrival delay
-delayed %>%
+flight %>%
   mutate(Month = factor(Month)) %>%
   group_by(Month) %>% 
   summarize(Percent = round(mean(ADelay == 1) * 100, 2)) %>%
@@ -156,7 +156,9 @@ monthly_delay + geom_text(aes(label = AvgDelay), hjust = - 0.1, size = 3)
 
 ```{r, echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='hide',fig.keep='all'}
 #join planes to flight and change the type from chr to int and drop all rows with NA in 'year' column
-pdata <-left_join(delayed, planes, by = c("TailNum" = "tailnum")) %>%
+planes %<>% select(tailnum, year)
+
+pdata <-left_join(flight, planes, by = c("TailNum" = "tailnum")) %>%
   rename("ManYear" = "year") %>%
   mutate(ManYear = as.integer(ManYear)) %>%
   filter(ManYear != 0 & !is.na(ManYear)) %>%
@@ -166,7 +168,7 @@ pdata <-left_join(delayed, planes, by = c("TailNum" = "tailnum")) %>%
 #probability of a flight with delay
 pdata %>%
   group_by(age) %>%
-  summarise(Percent = round(mean(ADelay == 1 | DDelay == 1)* 100,2)) %>%
+  summarise(Percent = mean(ADelay == 1 | DDelay == 1)* 100) %>%
   ggplot(aes(x = age, y = Percent)) +
   geom_point() +
   labs(title = "Probability of flight delay", x = "Age of plane", y = "") +
@@ -248,7 +250,7 @@ ggplot(tail(outbound), aes(x= State, y= abs(Diff)))  +
 
 ```{r}
 #show that departure delay affects arrival delay at the next airport
-delayed %>%
+flight %>%
   filter(DepDelay > 0) %>%
   select(ArrDelay, DepDelay) %>%
   distinct() %>%
@@ -259,7 +261,7 @@ delayed %>%
   theme_ipsum()
 
 #from delayed, check the airport with the most LateAircraftDelay
-delayed %>%
+flight %>%
   filter(LateAircraftDelay > 0) %>%
   group_by(Origin) %>%
   summarise(Total = n()) %>%
@@ -267,7 +269,7 @@ delayed %>%
   head()
 
 #find the tailnum with the most occurence of late aircraft delay; N679AE
-delayed %>%
+flight %>%
   filter(Origin == "ORD", LateAircraftDelay > 0) %>%
   group_by(TailNum) %>% 
   summarise(Total = n()) %>%
@@ -289,7 +291,7 @@ ggplot(fdata)+
   geom_point(aes(y=CRSArrTime,x= Origin,colour="CRSArrTime")) +
   geom_line(aes(y=ArrTime,x= Origin,colour="ArrTime"),group=1) +
   geom_point(aes(y=ArrTime,x= Origin,colour="ArrTime")) +
-  labels(y = 'Time')
+  labs(y ='Time')
 
 ```
 ### Question 5
@@ -305,15 +307,15 @@ library(skimr)
 Create the column `Delayed`
 
 ```{r}
-delayed$Origin <- as_factor(delayed$Origin)
-delayed %<>%
+flight$Origin <- as_factor(flight$Origin)
+flight %<>%
   mutate(Delayed = as_factor(ifelse(ArrDelay > 0 | DepDelay > 0, 1, 0)))
 
-delayed %<>% filter(!is.na(Delayed))
+flight %<>% filter(!is.na(Delayed))
 
-skim(delayed)
+skim(flight)
 
-delay_model <- delayed %>%
+delay_model <- flight %>%
   select(Year, Month, DayofMonth, DayOfWeek, CRSDepTime, CRSArrTime, ArrDelay, DepDelay, ADelay, DDelay, Delayed, Origin, DepInterval)
 
 ```
