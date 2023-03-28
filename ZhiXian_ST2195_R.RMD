@@ -28,7 +28,6 @@ library(hrbrthemes)
 ```{r}
 airports <- read.csv("airports.csv", header = TRUE)
 planes <- read.csv("plane-data.csv", header = TRUE)
-carriers <- read.csv("carriers.csv", header = TRUE)
 data_2006 <- read.csv("2006.csv")
 data_2007 <- read.csv("2007.csv")
 ```
@@ -54,7 +53,8 @@ flight %<>%
                                        "1600 ~ 1759 hrs","1800 ~ 1959 hrs", "2000 ~ 2159 hrs", "2200 ~ 2359 hrs"),
                            right = FALSE)) %>%
   mutate(ADelay = as_factor(ifelse(ArrDelay > 0, 1,0))) %>%
-  mutate(DDelay = as_factor(ifelse(DepDelay > 0, 1,0)))
+  mutate(DDelay = as_factor(ifelse(DepDelay > 0, 1,0))) %>%
+  select(-TaxiIn, -TaxiOut, -CancellationCode, -Diverted, -Cancelled, -UniqueCarrier)
 
 arrival_delay <- flight %>% 
   filter(ArrDelay > 0) %>%
@@ -69,12 +69,15 @@ arrival_delay
 flight %>%
   group_by(DepInterval) %>% 
   summarize(Percent = round(mean(ADelay == 1) * 100, 2)) %>%
-  ggplot(aes(x= Percent, y= DepInterval)) +
-  geom_col() +
-  labs(title = "Probability of delayed flight", x = "Percentage", y = "") +
-  scale_y_discrete(limits = rev) +
-  geom_text(aes(label = Percent), hjust = - 0.1 ,position = position_dodge(width = 1), size = 3) +
-  theme_classic()
+  ggplot(aes(y= Percent, x= DepInterval)) +
+  geom_col(fill='steelblue') +
+  scale_y_continuous(limits= c(0, 60), expand = c(0, 0)) +
+  labs(title = "Percentage of delayed flights per interval", x = "", y = "Percentage (%)") +
+  scale_x_discrete() +
+  geom_text(aes(label=Percent), position=position_dodge(width=0.9), vjust=-0.25) +
+  theme_classic() +
+  theme(axis.text.x = element_text(face="bold", angle = 45, hjust=1))
+
 
 #mean depart delay time for each intervals
 TimeOfDay <- arrival_delay %>%
@@ -88,9 +91,10 @@ TimeOfDay
 ```{r}
 #Plot the graph
 least_delay_day <-ggplot(TimeOfDay, aes(x= AvgDelay, y=DepInterval)) +
-  geom_col(fill= 'pink') +
-  labs(title = "Average Delay Duration per Departure Interval", x = "Duration of Delay (Minutes)", y = "") +
-  scale_y_discrete(limits = rev) 
+  geom_col(fill= 'lightblue') +
+  labs(title = "Average delay duration per interval", x = "Duration of Delay (Minutes)", y = "") +
+  scale_y_discrete(limits = rev)+
+  scale_x_continuous(limits= c(0, 45), expand = c(0, 0))
 least_delay_day + geom_text(aes(label = AvgDelay), hjust = - 0.1 ,position = position_dodge(width = 1), size = 3) +
   theme_classic()
 
@@ -103,11 +107,12 @@ flight %>%
                             labels = c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"))) %>%
   group_by(DayOfWeek) %>% 
   summarize(Percent = round(mean(ADelay == 1) * 100, 2)) %>%
-  ggplot(aes(x= Percent, y= DayOfWeek)) +
-  geom_col() +
-  labs(title = "Probability of delayed flight", x = "Percentage", y = "") +
-  scale_y_discrete(limits = rev) +
-  geom_text(aes(label = Percent), hjust = - 0.1 ,position = position_dodge(width = 1), size = 3) +
+  ggplot(aes(x= DayOfWeek, y= Percent)) +
+  geom_col(fill= 'steelblue') +
+  labs(title = "Percentage of delayed flights per day", x = "Day", y = "Percentage (%)") +
+  scale_x_discrete() +
+  scale_y_continuous(limits= c(0, 60), expand = c(0, 0)) +
+  geom_text(aes(label=Percent), position=position_dodge(width=0.9), vjust=-0.25) +
   theme_classic()
 
 day_of_week <- arrival_delay %>%
@@ -117,9 +122,11 @@ day_of_week <- arrival_delay %>%
   group_by(DayOfWeek) %>%
   summarise(AvgDelay = round(mean(ArrDelay), 2)) %>%
   ggplot(aes(x = AvgDelay, y = DayOfWeek)) +
-  geom_col(fill= '#2fccc7') +
-  labs(title = "Average Delay Duration Per Day of Week", x = 'Delay Duration (Minutes)', y = '') +
-  scale_y_discrete(limits = rev)
+  geom_col(fill= 'lightblue') +
+  labs(title = "Average Delay Duration Per day", x = 'Delay Duration (Minutes)', y = '') +
+  scale_y_discrete(limits = rev) +
+  scale_x_continuous(limits= c(0, 40), expand = c(0, 0)) +
+  theme_classic()
 
 day_of_week + geom_text(aes(label = AvgDelay), hjust = - 0.1 ,position = position_dodge(width = 1), size = 3)
 
@@ -132,11 +139,13 @@ flight %>%
   mutate(Month = factor(Month)) %>%
   group_by(Month) %>% 
   summarize(Percent = round(mean(ADelay == 1) * 100, 2)) %>%
-  ggplot(aes(x= Percent, y= Month)) +
-  geom_col() +
-  labs(title = "Probability of delayed flight", x = "Percentage", y = "") +
-  scale_y_discrete(limits = rev) +
-  geom_text(aes(label = Percent), hjust = - 0.1 ,position = position_dodge(width = 1), size = 3) +
+  ggplot(aes(x= Month, y= Percent)) +
+  geom_col(fill='steelblue') +
+  labs(title = "Probability of delayed flight", x = "Month", y = "Percentage (%)") +
+  scale_x_discrete(labels = c('Jan', 'Feb', 'Mar', 'Apr', 'May',
+                              'Jun','Jul','Aug','Sep', 'Oct', 'Nov', 'Dec')) +
+  scale_y_continuous(limits=c(0,60),expand= c(0,0)) +
+  geom_text(aes(label=Percent), position=position_dodge(width=0.9), vjust=-0.25) +
   theme_classic()
 
 #bar plot for month
@@ -145,8 +154,10 @@ monthly_delay <- arrival_delay %>%
   group_by(Month) %>%
   summarise(AvgDelay = round(mean(ArrDelay),2)) %>%
   ggplot(aes(x= AvgDelay, y=Month)) +
-  geom_col(fill= '#d15836') +
-  scale_y_discrete(limits=rev) +
+  geom_col(fill= 'lightblue') +
+  scale_y_discrete(labels = c('Jan', 'Feb', 'Mar', 'Apr', 'May',
+                              'Jun','Jul','Aug','Sep', 'Oct', 'Nov', 'Dec'), limits = rev) +
+  scale_x_continuous(limits=c(0,40), expand=c(0,0)) +
   labs(title = "Average Delay Duration per Month", x = "Delay Duration (Minutes)", y = "")
 
 monthly_delay + geom_text(aes(label = AvgDelay), hjust = - 0.1, size = 3)
@@ -161,17 +172,15 @@ planes %<>% select(tailnum, year)
 pdata <-left_join(flight, planes, by = c("TailNum" = "tailnum")) %>%
   rename("ManYear" = "year") %>%
   mutate(ManYear = as.integer(ManYear)) %>%
-  filter(ManYear != 0 & !is.na(ManYear)) %>%
-  mutate(age = Year - ManYear) %>%
-  filter(age > 0)
+  filter(ManYear != 0 & !is.na(ManYear))
   
 #probability of a flight with delay
 pdata %>%
-  group_by(age) %>%
+  group_by(ManYear) %>%
   summarise(Percent = mean(ADelay == 1 | DDelay == 1)* 100) %>%
-  ggplot(aes(x = age, y = Percent)) +
+  ggplot(aes(x = ManYear, y = Percent)) +
   geom_point() +
-  labs(title = "Probability of flight delay", x = "Age of plane", y = "") +
+  labs(title = "Percentage of flight delay", x = "Manufacture Year", y = "Percentage (%)") +
   theme_classic()
 ```
 
@@ -222,33 +231,46 @@ states <- c("AL" = "Alabama", "AK" = "Alaska",  "AZ" = "Arizona",  "AR" = "Arkan
   "UT" = "Utah", "VT" = "Vermont",  "VA" = "Virginia", "WA" = "Washington", "WV" = "West Virginia",
   "WI" = "Wisconsin", "WY" = "Wyoming", "PR" = "Puerto Rico", "VI" = "Virgin Islands")
 
-ggplot(head(inbound), aes(x= State, y= Diff))  +
-  geom_col() +
-  labs(title = "Highest increase in inbound flights", x = "States", y = "") +
+mostout <- head(outbound) %>% 
+  rename('Outbound'='Diff')
+
+mostin <- head(inbound)%>%
+  rename('Inbound' = 'Diff')
+
+leastout <- tail(outbound) %>%
+  rename('Outbound' = 'Diff')
+
+leastin <-tail(inbound)%>%
+  rename('Inbound' = 'Diff')
+
+#most increase in inbound and outbound
+increase <- rbind(mostout, mostin) %>%
+  gather('Direction', 'Value', 'Outbound':'Inbound', na.rm=TRUE)
+increase$State <- as.factor(increase$State)
+
+ggplot(increase, aes(x=State, y= Value, fill= Direction)) +
+  geom_bar(position= "dodge", stat = "identity") +
   scale_x_discrete(labels = states) +
+  scale_y_continuous(limits=c(0, 50000), expand= c(0,0)) +
+  labs(title = "Most increase in flights between 2006 and 2007", y= "Difference") +
   theme_light()
 
-ggplot(tail(inbound), aes(x= State, y= abs(Diff)))  +
-  geom_col() +
-  labs(title = "Highest decrease in inbound flights", x = "States", y = "") +
-  scale_x_discrete(labels = states) +
-  theme_light()  
+#most decrease in inbound and outbound
+decrease <-rbind(leastout, leastin) %>%
+  gather("Direction", "Value", 'Outbound':'Inbound', na.rm = TRUE)
+decrease$State <- as.factor(decrease$State)
 
-ggplot(head(outbound), aes(x= State, y= Diff))  +
-  geom_col() +
-  labs(title = "Highest increase in outbound flights", x = "States", y = "") +
+ggplot(decrease, aes(x=State, y= abs(Value), fill= Direction)) +
+  geom_bar(position= "dodge", stat = "identity") +
   scale_x_discrete(labels = states) +
-  theme_light()
-
-ggplot(tail(outbound), aes(x= State, y= abs(Diff)))  +
-  geom_col() +
-  labs(title = "Highest decrease in outbound flights", x = "States", y = "") +
-  scale_x_discrete(labels = states) +
+  scale_y_continuous(limits=c(0, 30000), expand= c(0,0)) +
+  labs(title = "Most decrease in flights between 2006 and 2007", y= "Difference") +
   theme_light()
 ```
 ##Question 4
 
-```{r}
+```{r, message=FALSE}
+
 #show that departure delay affects arrival delay at the next airport
 flight %>%
   filter(DepDelay > 0) %>%
@@ -258,7 +280,7 @@ flight %>%
   geom_point() +
   geom_smooth(method= lm, color="red", se=FALSE) +
   labs(title = "Relationship between Departure and Arrival Delay", x = "Departure Delay (Minutes)", y = "Arrival Delay (Minutes)") +
-  theme_ipsum()
+  theme_classic()
 
 #from delayed, check the airport with the most LateAircraftDelay
 flight %>%
